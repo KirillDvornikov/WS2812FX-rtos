@@ -326,16 +326,31 @@ void WS2812FX_strip_off() {
 * Inspired by the Adafruit examples.
 */
 uint32_t WS2812FX_color_wheel(uint8_t pos) {
-	pos = 255 - pos;
-	if(pos < 85) {
-		return ((uint32_t)(255 - pos * 3) << 16) | ((uint32_t)(0) << 8) | (pos * 3);
-	} else if(pos < 170) {
-		pos -= 85;
-		return ((uint32_t)(0) << 16) | ((uint32_t)(pos * 3) << 8) | (255 - pos * 3);
+	uint8_t r = 0;
+	uint8_t g = 0;
+	uint8_t b = 0;
+
+	if(pos < 43) {
+		r = 255;
+		g = pos * 6;
+	} else if(pos < 86) {
+		r = 255 - (pos - 43) * 6;
+		g = 255;
+	} else if (pos < 129) {
+		g = 255;
+		b = (pos - 86) * 6;
+	} else if (pos < 172) {
+		g = 255 - (pos - 129) * 6;
+		b = 255;
+	} else if (pos < 215) {
+		r = (pos - 172) * 6;
+		b = 255;
 	} else {
-		pos -= 170;
-		return ((uint32_t)(pos * 3) << 16) | ((uint32_t)(255 - pos * 3) << 8) | (0);
+		r = 255;
+		b = 255 - (pos - 215) * 6;
 	}
+
+	return (((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b));
 }
 
 /*
