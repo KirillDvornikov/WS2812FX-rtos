@@ -47,11 +47,15 @@ CHANGELOG
 #include "WS2812FX.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 #define CALL_MODE(n) _mode[n]();
+
+#define FADE_MIN_BRIGHTNESS 5
 
 uint8_t _mode_index = DEFAULT_MODE;
 uint8_t _speed = DEFAULT_SPEED;
@@ -70,6 +74,8 @@ uint32_t _mode_delay = 100;
 uint32_t _counter_mode_call = 0;
 uint32_t _counter_mode_step = 0;
 uint32_t _mode_last_call_time = 0;
+
+SemaphoreHandle_t xSemaphoreRunning;
 	  
 uint8_t get_random_wheel_index(uint8_t);
 
@@ -152,6 +158,11 @@ void WS2812_clear() {
 void WS2812_init(uint16_t pixel_count) {
 	_led_count = pixel_count;
     pixels = (ws2812_pixel_t*) malloc(_led_count * sizeof(ws2812_pixel_t));
+	xSemaphoreRunning = xSemaphoreCreateBinary();
+
+	if (xSemaphoreRunning == NULL) {
+		printf("Semaphore creation failure\n");
+	}
 	
 	// initialise the onboard led as a secondary indicator (handy for testing)
 	// gpio_enable(LED_INBUILT_GPIO, GPIO_OUTPUT);
@@ -172,9 +183,11 @@ void WS2812FX_init(uint16_t pixel_count) {
 
 void WS2812FX_service(void *_args) {
 	uint32_t now = 0;
+	bool last_iter_was_running = false;;
 	
 	while (true) {
 		if(_running) {
+			last_iter_was_running = true;
 			//printf("_brightness : _target_brightness %ld : %ld \n", _brightness, _target_brightness);
 			
             if (_slow_start) {
@@ -198,6 +211,9 @@ void WS2812FX_service(void *_args) {
 				
 				//gpio_toggle(LED_INBUILT_GPIO); //led indicator
 			}  
+		} else if (last_iter_was_running) {
+			last_iter_was_running = false;
+			xSemaphoreGive(xSemaphoreRunning);
 		}
 		vTaskDelay(33 / portTICK_PERIOD_MS);
 	}
@@ -211,6 +227,12 @@ void WS2812FX_start() {
 
 void WS2812FX_stop() {
 	_running = false;
+}
+
+void WS2812FX_switch_off(void) {
+	WS2812FX_stop();
+	xSemaphoreTake(xSemaphoreRunning, 500 / portTICK_PERIOD_MS);
+	WS2812_clear();
 }
 
 void WS2812FX_setMode360(float m) {
@@ -315,7 +337,6 @@ uint32_t WS2812FX_color_wheel(uint8_t pos) {
 		return ((uint32_t)(pos * 3) << 16) | ((uint32_t)(255 - pos * 3) << 8) | (0);
 	}
 }
-
 
 /*
 * Returns a new, random wheel index with a minimum distance of 42 from pos.
@@ -492,7 +513,7 @@ void WS2812FX_mode_breath(void) {
 void WS2812FX_mode_fade(void) {
 	int b = _counter_mode_step - 127;
 	b = 255 - (abs(b) * 2);
-	b = map(b, 0, 255, min(25, _target_brightness), _target_brightness);
+	b = map(b, 0, 255, min(FADE_MIN_BRIGHTNESS, _target_brightness), _target_brightness);
 	_brightness = b;
 
 	for(uint16_t i=0; i < _led_count; i++) {
@@ -1302,6 +1323,18 @@ void WS2812FX_mode_halloween(void) {
 }
 
 /*
+* Fades the LEDs on and (almost) off again, then changes a color. 
+*/
+void WS2812FX_mode_fade_random(void) {
+	WS2812FX_mode_fade();
+
+	if (_counter_mode_step == 0) {;
+		_mode_color = WS2812FX_get_random_wheel_index(_mode_color & 0x0000FF);  //use _mode_color to store a color index
+		_color = WS2812FX_color_wheel(_mode_color);	
+	}
+}
+
+/*
 * Random flickering.
 */
 void WS2812FX_mode_fire_flicker(void) {
@@ -1529,6 +1562,57 @@ void WS2812FX_mode_circus_combustus(void) {
 	_mode_delay = 100 + ((100 * (uint32_t)(SPEED_MAX - _speed)) / _led_count);
 }
 
+void WS2812FX_mode_trivial_static (void) {
+	for(uint16_t i=0; i < _led_count; i++) {
+		switch (i % 3) {
+		case 0:
+			WS2812_setPixelColor32(i, 0xFF0000);
+			break;
+		case 1:
+			WS2812_setPixelColor32(i,  0x00FF00);
+			break;
+		case 2:
+			WS2812_setPixelColor32(i,0x0000FF);
+			break;
+		}
+	}
+	WS2812_show();
+
+	_mode_delay = 50;
+}
+
+void WS2812FX_mode_trivial_dynamic (void) {
+	for(uint16_t i=0; i < _led_count; i++) {
+		switch (i % 3) {
+		case 0:
+			WS2812_setPixelColor32(i, _counter_mode_step == 1 ? 0 : 0xFF0000);
+			break;
+		case 1:
+			WS2812_setPixelColor32(i, _counter_mode_step == 3 ? 0 : 0x00FF00);
+			break;
+		case 2:
+			WS2812_setPixelColor32(i, _counter_mode_step == 5 ? 0 : 0x0000FF);
+			break;
+		}
+	}
+	WS2812_show();
+
+	_counter_mode_step = (_counter_mode_step + 1) % 6;
+	_mode_delay = 100 + ((50 * (uint32_t)(SPEED_MAX - _speed)) / _led_count);
+}
+
+void WS2812FX_mode_rainbow_segment (void) {
+	uint16_t color_step = (int16_t)(256.0/7*3/_led_count);	//show 3 colors of rainbow
+	for(uint16_t i=0; i < _led_count; i++) {
+		WS2812_setPixelColor32(i, WS2812FX_color_wheel((i * color_step + _counter_mode_step) % 256));
+	}
+	WS2812_show();
+
+	_counter_mode_step = (_counter_mode_step + 1) % 256;
+
+	_mode_delay = 1 + ((50 * (uint32_t)(SPEED_MAX - _speed)) / SPEED_MAX);
+}
+
 void WS2812FX_initModes() {
 	_mode[FX_MODE_STATIC]                  = &WS2812FX_mode_static;
 	_mode[FX_MODE_BLINK]                   = &WS2812FX_mode_blink;
@@ -1584,4 +1668,8 @@ void WS2812FX_initModes() {
 	_mode[FX_MODE_DUAL_COLOR_WIPE_OUT_IN]  = &WS2812FX_mode_dual_color_wipe_out_in;
 	_mode[FX_MODE_CIRCUS_COMBUSTUS]        = &WS2812FX_mode_circus_combustus;
 	_mode[FX_MODE_HALLOWEEN]               = &WS2812FX_mode_halloween;
+	_mode[FX_MODE_FADE_RANDOM]			   = &WS2812FX_mode_fade_random;
+	_mode[FX_MODE_TRIVIAL_STATIC]          = &WS2812FX_mode_trivial_static;
+	_mode[FX_MODE_TRIVIAL_DYNAMIC]         = &WS2812FX_mode_trivial_dynamic;
+	_mode[FX_MODE_RAINBOW_SEGMENT]         = &WS2812FX_mode_rainbow_segment;
 }

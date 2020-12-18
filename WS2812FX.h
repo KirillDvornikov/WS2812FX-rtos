@@ -55,8 +55,6 @@ CHANGELOG
 #define BRIGHTNESS_MAX 255
 #define BRIGHTNESS_FILTER 0.9
 
-#define MODE_COUNT 54
-
 #define FX_MODE_STATIC                   0
 #define FX_MODE_BLINK                    1
 #define FX_MODE_BREATH                   2
@@ -111,6 +109,11 @@ CHANGELOG
 #define FX_MODE_DUAL_COLOR_WIPE_OUT_IN  51
 #define FX_MODE_CIRCUS_COMBUSTUS        52
 #define FX_MODE_HALLOWEEN               53
+#define FX_MODE_FADE_RANDOM             54
+#define FX_MODE_TRIVIAL_STATIC          55
+#define FX_MODE_TRIVIAL_DYNAMIC         56
+#define FX_MODE_RAINBOW_SEGMENT         57
+#define MODE_COUNT		            	58
 
 typedef void (*mode)(void);
   
@@ -120,6 +123,7 @@ void
 	WS2812FX_service(void *_args),
 	WS2812FX_start(void),
 	WS2812FX_stop(void),
+	WS2812FX_switch_off(void),
 	WS2812FX_setMode(uint8_t m),
 	WS2812FX_setMode360(float m),
 	WS2812FX_setSpeed(uint8_t s),
@@ -202,6 +206,7 @@ void
 	WS2812FX_mode_dual_color_wipe_out_out(void),
 	WS2812FX_mode_dual_color_wipe_out_in(void),
 	WS2812FX_mode_circus_combustus(void),
-	WS2812FX_mode_halloween(void);
+	WS2812FX_mode_halloween(void),
+	WS2812FX_mode_fade_random(void);
 
 #endif
