@@ -183,11 +183,9 @@ void WS2812FX_init(uint16_t pixel_count) {
 
 void WS2812FX_service(void *_args) {
 	uint32_t now = 0;
-	bool last_iter_was_running = false;;
 	
 	while (true) {
 		if(_running) {
-			last_iter_was_running = true;
 			//printf("_brightness : _target_brightness %ld : %ld \n", _brightness, _target_brightness);
 			
             if (_slow_start) {
@@ -211,8 +209,7 @@ void WS2812FX_service(void *_args) {
 				
 				//gpio_toggle(LED_INBUILT_GPIO); //led indicator
 			}  
-		} else if (last_iter_was_running) {
-			last_iter_was_running = false;
+		} else {
 			xSemaphoreGive(xSemaphoreRunning);
 		}
 		vTaskDelay(33 / portTICK_PERIOD_MS);
