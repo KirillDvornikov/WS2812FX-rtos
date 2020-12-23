@@ -151,7 +151,6 @@ uint32_t
 
 //private
 void
-	WS2812FX_strip_off(void),
 	WS2812FX_mode_static(void),
 	WS2812FX_mode_blink(void),
 	WS2812FX_mode_color_wipe(void),

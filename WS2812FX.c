@@ -314,13 +314,6 @@ void WS2812FX_setSlowStart(bool slow_start) {
 ##################################################### */
 
 /*
-* Turns everything off. Doh.
-*/
-void WS2812FX_strip_off() {
-	WS2812_clear();
-}
-
-/*
 * Put a value 0 to 255 in to get a color value.
 * The colours are a transition r -> g -> b -> back to r
 * Inspired by the Adafruit examples.
@@ -396,7 +389,7 @@ void WS2812FX_mode_blink(void) {
 		}
 		WS2812_show();
 	} else {
-		WS2812FX_strip_off();
+		WS2812_clear();
 	}
 
 	_mode_delay = 100 + ((1986 * (uint32_t)(SPEED_MAX - _speed)) / SPEED_MAX);
@@ -681,7 +674,7 @@ void WS2812FX_mode_running_lights(void) {
 */
 void WS2812FX_mode_twinkle(void) {
 	if(_counter_mode_step == 0) {
-		WS2812FX_strip_off();
+		WS2812_clear();
 		uint32_t min_leds = max(1, _led_count/5); // make sure, at least one LED is on
 		uint32_t max_leds = max(1, _led_count/2); // make sure, at least one LED is on
 		_counter_mode_step = randomInRange(min_leds, max_leds);
@@ -873,7 +866,7 @@ void WS2812FX_mode_blink_rainbow(void) {
 		}
 		WS2812_show();
 	} else {
-		WS2812FX_strip_off();
+		WS2812_clear();
 	}
 
 	_mode_delay = 100 + ((1986 * (uint32_t)(SPEED_MAX - _speed)) / SPEED_MAX);
