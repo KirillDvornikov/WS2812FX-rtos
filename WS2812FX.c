@@ -482,7 +482,7 @@ void WS2812FX_mode_multi_dynamic(void) {
 void WS2812FX_mode_breath(void) {
 	//                                      0    1    2   3   4   5   6    7   8   9  10  11   12   13   14   15   16    // step
 	uint16_t breath_delay_steps[] =     {   7,   9,  13, 15, 16, 17, 18, 930, 19, 18, 15, 13,   9,   7,   4,   5,  10 }; // magic numbers for breathing LED
-	uint8_t breath_brightness_steps[] = { 150, 125, 100, 75, 50, 25, 16,  15, 16, 25, 50, 75, 100, 125, 150, 220, 255 }; // even more magic numbers!
+	uint8_t breath_brightness_steps[] = { 150, 125, 100, 75, 50, 25, 16,  0, 16, 25, 50, 75, 100, 125, 150, 220, 255 }; // even more magic numbers!
 
 	if(_counter_mode_call == 0) {
 		_mode_color = breath_brightness_steps[0] + 1;
@@ -1339,6 +1339,21 @@ void WS2812FX_mode_fade_random(void) {
 	}
 }
 
+
+/*
+* Breathe mode with random color
+*/
+void WS2812FX_mode_breath_random(void) {
+	static uint8_t breath_color_index = 0;
+
+	if (_mode_color == 0) {	//_mode_color used to store breath brightness
+		breath_color_index = WS2812FX_get_random_wheel_index(breath_color_index);
+		_color = WS2812FX_color_wheel(breath_color_index);
+	}
+
+	WS2812FX_mode_breath();
+}
+
 /*
 * Random flickering.
 */
@@ -1677,4 +1692,5 @@ void WS2812FX_initModes() {
 	_mode[FX_MODE_TRIVIAL_STATIC]          = &WS2812FX_mode_trivial_static;
 	_mode[FX_MODE_TRIVIAL_DYNAMIC]         = &WS2812FX_mode_trivial_dynamic;
 	_mode[FX_MODE_RAINBOW_SEGMENT]         = &WS2812FX_mode_rainbow_segment;
+	_mode[FX_MODE_BREATH_RANDOM]           = &WS2812FX_mode_breath_random;
 }

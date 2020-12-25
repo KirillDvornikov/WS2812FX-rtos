@@ -113,7 +113,8 @@ CHANGELOG
 #define FX_MODE_TRIVIAL_STATIC          55
 #define FX_MODE_TRIVIAL_DYNAMIC         56
 #define FX_MODE_RAINBOW_SEGMENT         57
-#define MODE_COUNT		            	58
+#define FX_MODE_BREATH_RANDOM	        58
+#define MODE_COUNT		            	59
 
 typedef void (*mode)(void);
   
@@ -206,6 +207,7 @@ void
 	WS2812FX_mode_dual_color_wipe_out_in(void),
 	WS2812FX_mode_circus_combustus(void),
 	WS2812FX_mode_halloween(void),
-	WS2812FX_mode_fade_random(void);
+	WS2812FX_mode_fade_random(void),
+	WS2812FX_mode_breath_random(void);
 
 #endif
